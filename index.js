@@ -25,13 +25,13 @@ app.post('/webhook/lark', (req, res) => {
     // Handle Lark webhook verification challenge
     if (req.body && req.body.challenge) {
       console.log('🔐 Lark webhook verification challenge received:', req.body.challenge);
-      return res.status(200).json({ challenge: req.body.challenge });
+      return res.status(200).send(req.body.challenge);
     }
 
     // Handle Lark webhook verification with type field
     if (req.body && req.body.type === 'url_verification') {
       console.log('🔐 Lark webhook URL verification received:', req.body.challenge);
-      return res.status(200).json({ challenge: req.body.challenge });
+      return res.status(200).send(req.body.challenge);
     }
 
     // For any other request, return success
@@ -56,13 +56,13 @@ app.post('/api/webhooks/lark-verify', (req, res) => {
     // Handle Lark webhook verification challenge
     if (req.body && req.body.challenge) {
       console.log('🔐 Challenge received:', req.body.challenge);
-      return res.status(200).json({ challenge: req.body.challenge });
+      return res.status(200).send(req.body.challenge);
     }
 
     // Handle Lark webhook verification with type field
     if (req.body && req.body.type === 'url_verification') {
       console.log('🔐 URL verification received:', req.body.challenge);
-      return res.status(200).json({ challenge: req.body.challenge });
+      return res.status(200).send(req.body.challenge);
     }
 
     // For any other request, return success
