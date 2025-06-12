@@ -1,18 +1,35 @@
 const express = require('express');
 const crypto = require('crypto');
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
-// Deployment timestamp: 2024-06-12 09:59 - Manual redeploy trigger
+// Deployment timestamp: 2024-06-12 10:58 - Complete webhook rewrite for encrypted challenges
 // Lark app credentials from environment variables
 const LARK_APP_ID = process.env.LARK_APP_ID || 'cli_a8cecb6af438d02f';
 const LARK_APP_SECRET = process.env.LARK_APP_SECRET || 'ZsI84qt2SA3L1PedniU5ShMbQqtpUrql';
 const LARK_VERIFICATION_TOKEN = process.env.LARK_VERIFICATION_TOKEN || process.env.VERIFICATION_TOKEN;
 const LARK_ENCRYPT_KEY = process.env.LARK_ENCRYPT_KEY;
 
-// Middleware to parse JSON and raw body
-app.use('/webhook/lark', express.raw({ type: 'application/json' }));
-app.use('/api/webhooks/lark-verify', express.raw({ type: 'application/json' }));
+console.log('🚀 Starting Enhanced Lark Webhook Server v1.0.4...');
+console.log('📋 Configuration:', {
+  app_id: LARK_APP_ID,
+  verification_token_set: !!LARK_VERIFICATION_TOKEN,
+  encrypt_key_set: !!LARK_ENCRYPT_KEY,
+  encrypt_key_preview: LARK_ENCRYPT_KEY ? LARK_ENCRYPT_KEY.substring(0, 8) + '...' : 'NOT_SET'
+});
+
+// Middleware for raw body parsing - CRITICAL for encrypted data
+app.use('/webhook/lark', express.raw({ 
+  type: ['application/json', 'application/x-www-form-urlencoded', '*/*'],
+  limit: '10mb'
+}));
+
+app.use('/api/webhooks/lark-verify', express.raw({ 
+  type: ['application/json', 'application/x-www-form-urlencoded', '*/*'],
+  limit: '10mb'
+}));
+
+// Regular JSON middleware for other endpoints
 app.use(express.json());
 
 // CORS for testing
@@ -27,179 +44,233 @@ app.use((req, res, next) => {
   }
 });
 
-// Function to decrypt Lark webhook data
-function decryptLarkData(encryptedData) {
+// Enhanced decryption function with multiple methods
+function decryptLarkChallenge(encryptedData) {
   if (!LARK_ENCRYPT_KEY) {
-    console.log('⚠️ LARK_ENCRYPT_KEY not set, skipping decryption');
+    console.log('⚠️ LARK_ENCRYPT_KEY not set, cannot decrypt');
     return null;
   }
-  
+
+  const dataToDecrypt = typeof encryptedData === 'string' ? encryptedData.trim() : encryptedData.toString().trim();
+  console.log('🔓 Attempting to decrypt data (length: ' + dataToDecrypt.length + ')');
+  console.log('🔓 Data preview:', dataToDecrypt.substring(0, 100) + '...');
+
+  // Method 1: Standard Lark AES-256-CBC with SHA256 hashed key
   try {
-    console.log('🔓 Attempting to decrypt data...');
-    
-    // Lark uses AES-256-CBC encryption with a hashed key
+    console.log('🔄 Method 1: SHA256 hashed key with zero IV');
     const key = crypto.createHash('sha256').update(LARK_ENCRYPT_KEY, 'utf8').digest();
-    const iv = Buffer.alloc(16, 0); // Lark uses zero IV
+    const iv = Buffer.alloc(16, 0);
     
-    // Create decipher
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
     decipher.setAutoPadding(true);
     
-    // Decrypt the data
-    let decrypted = decipher.update(encryptedData, 'base64', 'utf8');
+    let decrypted = decipher.update(dataToDecrypt, 'base64', 'utf8');
     decrypted += decipher.final('utf8');
     
-    console.log('✅ Decryption successful:', decrypted.substring(0, 100) + '...');
-    return JSON.parse(decrypted);
+    const parsed = JSON.parse(decrypted);
+    console.log('✅ Method 1 successful!');
+    return parsed;
   } catch (error) {
-    console.error('❌ Primary decryption failed:', error.message);
-    
-    // Try alternative method with direct key
-    try {
-      console.log('🔄 Trying alternative decryption with direct key...');
-      const key = Buffer.from(LARK_ENCRYPT_KEY, 'utf8');
-      const iv = Buffer.alloc(16, 0);
-      
-      const decipher = crypto.createDecipheriv('aes-256-cbc', crypto.createHash('sha256').update(key).digest(), iv);
-      let decrypted = decipher.update(encryptedData, 'base64', 'utf8');
-      decrypted += decipher.final('utf8');
-      
-      console.log('✅ Alternative decryption successful');
-      return JSON.parse(decrypted);
-    } catch (altError) {
-      console.error('❌ Alternative decryption also failed:', altError.message);
-      return null;
-    }
+    console.log('❌ Method 1 failed:', error.message);
   }
+
+  // Method 2: Direct key without hashing
+  try {
+    console.log('🔄 Method 2: Direct key without hashing');
+    const key = Buffer.from(LARK_ENCRYPT_KEY, 'utf8');
+    
+    // Ensure key is 32 bytes for AES-256
+    const finalKey = key.length === 32 ? key : crypto.createHash('sha256').update(key).digest();
+    const iv = Buffer.alloc(16, 0);
+    
+    const decipher = crypto.createDecipheriv('aes-256-cbc', finalKey, iv);
+    let decrypted = decipher.update(dataToDecrypt, 'base64', 'utf8');
+    decrypted += decipher.final('utf8');
+    
+    const parsed = JSON.parse(decrypted);
+    console.log('✅ Method 2 successful!');
+    return parsed;
+  } catch (error) {
+    console.log('❌ Method 2 failed:', error.message);
+  }
+
+  // Method 3: Try with different padding
+  try {
+    console.log('🔄 Method 3: Custom padding approach');
+    const key = crypto.createHash('sha256').update(LARK_ENCRYPT_KEY, 'utf8').digest();
+    const iv = Buffer.alloc(16, 0);
+    
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    decipher.setAutoPadding(false);
+    
+    let decrypted = decipher.update(dataToDecrypt, 'base64', 'binary');
+    decrypted += decipher.final('binary');
+    
+    // Remove padding manually
+    const lastByte = decrypted.charCodeAt(decrypted.length - 1);
+    if (lastByte < 16) {
+      decrypted = decrypted.substring(0, decrypted.length - lastByte);
+    }
+    
+    const parsed = JSON.parse(decrypted);
+    console.log('✅ Method 3 successful!');
+    return parsed;
+  } catch (error) {
+    console.log('❌ Method 3 failed:', error.message);
+  }
+
+  console.log('❌ All decryption methods failed');
+  return null;
 }
 
-// Function to verify Lark webhook signature
-function verifyLarkSignature(timestamp, nonce, body, signature) {
-  if (!LARK_VERIFICATION_TOKEN) {
-    console.log('⚠️ VERIFICATION_TOKEN not set, skipping signature verification');
-    return true;
-  }
+// Fast challenge response function
+function sendChallenge(res, challenge) {
+  console.log('📤 SENDING CHALLENGE RESPONSE:', challenge);
+  console.log('📤 Challenge type:', typeof challenge);
+  console.log('📤 Challenge length:', challenge ? challenge.length : 0);
   
-  const bodyStr = typeof body === 'string' ? body : JSON.stringify(body);
-  const stringToSign = timestamp + nonce + LARK_VERIFICATION_TOKEN + bodyStr;
-  const computedSignature = crypto.createHash('sha256').update(stringToSign, 'utf8').digest('hex');
-  
-  console.log('🔐 Signature verification:', {
-    timestamp,
-    nonce,
-    expectedSignature: signature,
-    computedSignature
+  // Set headers for plain text response
+  res.set({
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Cache-Control': 'no-cache',
+    'X-Response-Time': Date.now()
   });
   
-  return computedSignature === signature;
+  // Send the challenge immediately
+  res.status(200).send(String(challenge));
+  
+  console.log('✅ Challenge response sent successfully');
+  return true;
 }
 
-// Main webhook handler function
+// Main webhook handler
 function handleLarkWebhook(req, res) {
+  const startTime = Date.now();
   console.log('\n🔐 ========== Lark Webhook Request ==========');
   console.log('📅 Timestamp:', new Date().toISOString());
+  console.log('🔐 Method:', req.method);
+  console.log('🔐 URL:', req.url);
   console.log('🔐 Headers:', JSON.stringify(req.headers, null, 2));
   
   try {
-    let webhookData;
+    let bodyText = '';
     
-    // Handle raw body (potentially encrypted)
     if (Buffer.isBuffer(req.body)) {
-      const bodyStr = req.body.toString('utf8');
-      console.log('📦 Raw body length:', bodyStr.length);
-      console.log('📦 Raw body preview:', bodyStr.substring(0, 200) + '...');
+      bodyText = req.body.toString('utf8');
+    } else if (typeof req.body === 'string') {
+      bodyText = req.body;
+    } else if (req.body) {
+      bodyText = JSON.stringify(req.body);
+    }
+    
+    console.log('📦 Body type:', typeof req.body);
+    console.log('📦 Body length:', bodyText.length);
+    console.log('📦 Body preview:', bodyText.substring(0, 200) + (bodyText.length > 200 ? '...' : ''));
+    
+    let webhookData = null;
+    
+    // First, try to parse as JSON (unencrypted)
+    try {
+      webhookData = JSON.parse(bodyText);
+      console.log('✅ Parsed as plain JSON (unencrypted)');
+    } catch (e) {
+      console.log('📝 Not plain JSON, attempting decryption...');
       
-      // Try to parse as JSON first
-      try {
-        webhookData = JSON.parse(bodyStr);
-        console.log('✅ Parsed as JSON successfully');
-      } catch (e) {
-        // If JSON parsing fails, try to decrypt
-        console.log('📝 Not JSON, attempting decryption...');
-        webhookData = decryptLarkData(bodyStr.trim());
-        if (!webhookData) {
-          console.error('❌ Failed to decrypt webhook data');
-          return res.status(400).json({ error: 'Failed to decrypt webhook data' });
-        }
+      // Try to decrypt the data
+      webhookData = decryptLarkChallenge(bodyText);
+      
+      if (!webhookData) {
+        console.error('❌ Failed to decrypt webhook data');
+        const elapsed = Date.now() - startTime;
+        console.log('⏱️ Request processing time:', elapsed + 'ms');
+        return res.status(400).json({ 
+          error: 'Failed to decrypt webhook data',
+          timestamp: new Date().toISOString(),
+          elapsed: elapsed + 'ms'
+        });
       }
-    } else {
-      webhookData = req.body;
-      console.log('📧 Using parsed body directly');
+      
+      console.log('✅ Successfully decrypted webhook data');
     }
     
     console.log('📧 Final webhook data:', JSON.stringify(webhookData, null, 2));
     
-    // Handle Lark webhook URL verification challenge (uppercase CHALLENGE)
-    if (webhookData && webhookData.CHALLENGE) {
-      console.log('🔐 URL verification received (uppercase):', webhookData.CHALLENGE);
-      return res.status(200).type('text/plain').send(webhookData.CHALLENGE);
-    }
+    // PRIORITY: Handle challenge verification first for speed
+    const challenge = webhookData.CHALLENGE || webhookData.challenge;
     
-    // Handle Lark webhook URL verification challenge (lowercase challenge)
-    if (webhookData && webhookData.challenge) {
-      console.log('🔐 URL verification received (lowercase):', webhookData.challenge);
-      return res.status(200).type('text/plain').send(webhookData.challenge);
+    if (challenge) {
+      const elapsed = Date.now() - startTime;
+      console.log('🔐 CHALLENGE DETECTED:', challenge);
+      console.log('⏱️ Processing time before response:', elapsed + 'ms');
+      
+      return sendChallenge(res, challenge);
     }
     
     // Handle URL verification with type field
     if (webhookData && webhookData.type === 'url_verification') {
-      const challenge = webhookData.CHALLENGE || webhookData.challenge;
-      console.log('🔐 URL verification with type:', challenge);
-      
-      if (challenge) {
-        return res.status(200).type('text/plain').send(challenge);
+      const verificationChallenge = webhookData.CHALLENGE || webhookData.challenge;
+      if (verificationChallenge) {
+        const elapsed = Date.now() - startTime;
+        console.log('🔐 URL verification challenge:', verificationChallenge);
+        console.log('⏱️ Processing time before response:', elapsed + 'ms');
+        
+        return sendChallenge(res, verificationChallenge);
       }
     }
-
+    
     // Handle actual webhook events
-    console.log('📧 Received webhook event:', JSON.stringify(webhookData, null, 2));
+    console.log('📧 Processing webhook event...');
+    const eventType = webhookData.header?.event_type || webhookData.type || 'unknown';
+    console.log('📨 Event type:', eventType);
     
-    // Verify the request signature for actual events
-    const timestamp = req.headers['x-lark-request-timestamp'];
-    const nonce = req.headers['x-lark-request-nonce'];
-    const signature = req.headers['x-lark-signature'];
-    
-    if (timestamp && nonce && signature) {
-      const isValid = verifyLarkSignature(timestamp, nonce, req.body, signature);
-      if (!isValid) {
-        console.error('❌ Invalid signature for webhook event');
-        return res.status(401).json({ error: 'Invalid signature' });
-      }
-      console.log('✅ Event signature verified successfully');
-    }
-    
-    return res.status(200).json({ 
+    const response = {
+      success: true,
       message: 'Webhook received successfully',
       timestamp: new Date().toISOString(),
-      event_type: webhookData.header?.event_type || 'unknown'
-    });
-
+      event_type: eventType,
+      processing_time: (Date.now() - startTime) + 'ms'
+    };
+    
+    console.log('✅ Webhook processed successfully');
+    console.log('⏱️ Total processing time:', (Date.now() - startTime) + 'ms');
+    console.log('🔐 ========== End Webhook Request ==========\n');
+    
+    return res.status(200).json(response);
+    
   } catch (error) {
+    const elapsed = Date.now() - startTime;
     console.error('❌ Webhook error:', error);
-    return res.status(500).json({ error: 'Internal server error', details: error.message });
+    console.log('⏱️ Error processing time:', elapsed + 'ms');
+    
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message,
+      timestamp: new Date().toISOString(),
+      elapsed: elapsed + 'ms'
+    });
   }
 }
 
-// Lark webhook verification endpoint
+// Webhook endpoints
 app.post('/webhook/lark', handleLarkWebhook);
-
-// Alternative endpoint for testing
 app.post('/api/webhooks/lark-verify', handleLarkWebhook);
 
 // Health check endpoint
 app.get('/', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    message: 'DocaFlex Lark Webhook Server',
+  res.json({
+    status: 'ok',
+    message: 'DocaFlex Enhanced Lark Webhook Server v1.0.4',
     timestamp: new Date().toISOString(),
-    endpoints: {
-      primary: '/webhook/lark',
-      alternative: '/api/webhooks/lark-verify'
-    },
+    endpoints: [
+      '/webhook/lark (POST) - Main webhook endpoint',
+      '/api/webhooks/lark-verify (POST) - Verification endpoint',
+      '/ (GET) - Health check'
+    ],
     config: {
       app_id: LARK_APP_ID,
       verification_token_set: !!LARK_VERIFICATION_TOKEN,
-      encrypt_key_set: !!LARK_ENCRYPT_KEY
+      encrypt_key_set: !!LARK_ENCRYPT_KEY,
+      encrypt_key_length: LARK_ENCRYPT_KEY ? LARK_ENCRYPT_KEY.length : 0
     }
   });
 });
@@ -209,12 +280,10 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-app.listen(port, () => {
-  console.log(`🚀 DocaFlex Lark Webhook Server running on port ${port}`);
-  console.log(`📍 Primary webhook endpoint: /webhook/lark`);
-  console.log(`📍 Alternative webhook endpoint: /api/webhooks/lark-verify`);
-  console.log(`🔐 App ID: ${LARK_APP_ID}`);
-  console.log(`🔐 Verification token set: ${!!LARK_VERIFICATION_TOKEN}`);
-  console.log(`🔐 Encrypt key set: ${!!LARK_ENCRYPT_KEY}`);
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Enhanced Lark Webhook Server v1.0.4 running on port ${PORT}`);
+  console.log(`📡 Webhook URL: https://docaflex-webhook-production.up.railway.app/webhook/lark`);
+  console.log(`🔍 Health check: https://docaflex-webhook-production.up.railway.app/`);
   console.log(`🕒 Started at: ${new Date().toISOString()}`);
 });
