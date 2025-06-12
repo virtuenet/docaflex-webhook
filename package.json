@@ -1,17 +1,17 @@
 {
-  "name": "docaflex-temp-webhook",
-  "version": "1.0.0",
-  "description": "Temporary webhook server for DocaFlex Lark integration",
+  "name": "docaflex-lark-webhook",
+  "version": "1.0.3",
+  "description": "DocaFlex Lark Webhook Server with encrypted challenge support",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "node index.js"
+    "dev": "nodemon index.js"
   },
   "dependencies": {
     "express": "^4.18.2"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=16.0.0"
   },
   "keywords": ["webhook", "lark", "docaflex", "temporary"],
   "author": "DocaFlex",
