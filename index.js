@@ -3,10 +3,10 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ASYNCHRONOUS WEBHOOK v1.0.6 - Immediate HTTP 200 + Background Processing
+// ENHANCED DECRYPTION WEBHOOK v1.0.7 - Multiple decryption methods + detailed debugging
 const LARK_ENCRYPT_KEY = process.env.LARK_ENCRYPT_KEY;
 
-console.log('🚀 Asynchronous Webhook v1.0.6 - Immediate Response + Background Processing');
+console.log('🚀 Enhanced Decryption Webhook v1.0.7 - Multiple Decryption Methods');
 console.log('🔐 Encrypt key set:', !!LARK_ENCRYPT_KEY);
 console.log('🔑 Encrypt key preview:', LARK_ENCRYPT_KEY ? LARK_ENCRYPT_KEY.substring(0, 8) + '...' : 'NOT_SET');
 
@@ -28,59 +28,151 @@ app.use((req, res, next) => {
   }
 });
 
-// Lightning-fast decryption
-function quickDecrypt(encryptedData) {
-  if (!LARK_ENCRYPT_KEY) return null;
-  
-  try {
-    const key = crypto.createHash('sha256').update(LARK_ENCRYPT_KEY, 'utf8').digest();
-    const iv = Buffer.alloc(16, 0);
-    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-    
-    let decrypted = decipher.update(encryptedData.trim(), 'base64', 'utf8');
-    decrypted += decipher.final('utf8');
-    
-    return JSON.parse(decrypted);
-  } catch (error) {
+// ENHANCED DECRYPTION with multiple methods and detailed logging
+function enhancedDecrypt(encryptedData, requestId) {
+  if (!LARK_ENCRYPT_KEY) {
+    console.log(`⚠️ [${requestId}] LARK_ENCRYPT_KEY not set, cannot decrypt`);
     return null;
   }
-}
 
-// ASYNCHRONOUS EVENT PROCESSOR - Runs in background
-async function processEventAsync(eventData, requestId) {
+  const dataToDecrypt = encryptedData.trim();
+  console.log(`🔓 [${requestId}] Decrypt input length: ${dataToDecrypt.length}`);
+  console.log(`🔓 [${requestId}] Decrypt input preview: ${dataToDecrypt.substring(0, 50)}...`);
+
+  // Method 1: Standard Lark AES-256-CBC with SHA256 hashed key
   try {
-    console.log(`🔄 [${requestId}] Starting async processing...`);
+    console.log(`🔄 [${requestId}] Method 1: Standard Lark AES-256-CBC`);
+    const key = crypto.createHash('sha256').update(LARK_ENCRYPT_KEY, 'utf8').digest();
+    const iv = Buffer.alloc(16, 0);
     
-    const eventType = eventData.header?.event_type || eventData.type || 'unknown';
-    const eventId = eventData.header?.event_id || 'no-id';
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    decipher.setAutoPadding(true);
     
-    console.log(`📨 [${requestId}] Processing event: ${eventType} (ID: ${eventId})`);
+    let decrypted = decipher.update(dataToDecrypt, 'base64', 'utf8');
+    decrypted += decipher.final('utf8');
     
-    // Simulate processing time (replace with actual business logic)
-    await new Promise(resolve => setTimeout(resolve, 100));
+    console.log(`✅ [${requestId}] Method 1 decrypted length: ${decrypted.length}`);
+    console.log(`✅ [${requestId}] Method 1 decrypted content: ${decrypted}`);
     
-    // Add your actual event processing logic here:
-    switch (eventType) {
-      case 'im.message.receive_v1':
-        console.log(`💬 [${requestId}] Processing message event`);
-        // Handle message events
-        break;
-      case 'contact.user.created_v3':
-        console.log(`👤 [${requestId}] Processing user created event`);
-        // Handle user creation events
-        break;
-      default:
-        console.log(`❓ [${requestId}] Unknown event type: ${eventType}`);
+    const parsed = JSON.parse(decrypted);
+    console.log(`✅ [${requestId}] Method 1 parsed successfully:`, JSON.stringify(parsed, null, 2));
+    return parsed;
+  } catch (error) {
+    console.log(`❌ [${requestId}] Method 1 failed: ${error.message}`);
+  }
+
+  // Method 2: Direct key approach
+  try {
+    console.log(`🔄 [${requestId}] Method 2: Direct key approach`);
+    const key = Buffer.from(LARK_ENCRYPT_KEY, 'utf8');
+    const finalKey = key.length === 32 ? key : crypto.createHash('sha256').update(key).digest();
+    const iv = Buffer.alloc(16, 0);
+    
+    const decipher = crypto.createDecipheriv('aes-256-cbc', finalKey, iv);
+    let decrypted = decipher.update(dataToDecrypt, 'base64', 'utf8');
+    decrypted += decipher.final('utf8');
+    
+    console.log(`✅ [${requestId}] Method 2 decrypted: ${decrypted}`);
+    const parsed = JSON.parse(decrypted);
+    console.log(`✅ [${requestId}] Method 2 parsed successfully:`, JSON.stringify(parsed, null, 2));
+    return parsed;
+  } catch (error) {
+    console.log(`❌ [${requestId}] Method 2 failed: ${error.message}`);
+  }
+
+  // Method 3: Raw key with manual padding
+  try {
+    console.log(`🔄 [${requestId}] Method 3: Manual padding approach`);
+    const key = crypto.createHash('sha256').update(LARK_ENCRYPT_KEY, 'utf8').digest();
+    const iv = Buffer.alloc(16, 0);
+    
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    decipher.setAutoPadding(false);
+    
+    let decrypted = decipher.update(dataToDecrypt, 'base64', 'binary');
+    decrypted += decipher.final('binary');
+    
+    // Manual padding removal
+    const lastByte = decrypted.charCodeAt(decrypted.length - 1);
+    if (lastByte < 16) {
+      decrypted = decrypted.substring(0, decrypted.length - lastByte);
     }
     
-    console.log(`✅ [${requestId}] Event processed successfully`);
-    
+    console.log(`✅ [${requestId}] Method 3 decrypted: ${decrypted}`);
+    const parsed = JSON.parse(decrypted);
+    console.log(`✅ [${requestId}] Method 3 parsed successfully:`, JSON.stringify(parsed, null, 2));
+    return parsed;
   } catch (error) {
-    console.error(`❌ [${requestId}] Async processing error:`, error.message);
+    console.log(`❌ [${requestId}] Method 3 failed: ${error.message}`);
   }
+
+  // Method 4: Alternative IV approach
+  try {
+    console.log(`🔄 [${requestId}] Method 4: Alternative IV approach`);
+    const key = crypto.createHash('sha256').update(LARK_ENCRYPT_KEY, 'utf8').digest();
+    
+    // Try with IV extracted from first 16 bytes
+    const encryptedBuffer = Buffer.from(dataToDecrypt, 'base64');
+    if (encryptedBuffer.length > 16) {
+      const iv = encryptedBuffer.slice(0, 16);
+      const encryptedContent = encryptedBuffer.slice(16);
+      
+      const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+      let decrypted = decipher.update(encryptedContent, null, 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      console.log(`✅ [${requestId}] Method 4 decrypted: ${decrypted}`);
+      const parsed = JSON.parse(decrypted);
+      console.log(`✅ [${requestId}] Method 4 parsed successfully:`, JSON.stringify(parsed, null, 2));
+      return parsed;
+    }
+  } catch (error) {
+    console.log(`❌ [${requestId}] Method 4 failed: ${error.message}`);
+  }
+
+  console.log(`❌ [${requestId}] All decryption methods failed`);
+  return null;
 }
 
-// MAIN WEBHOOK HANDLER - Immediate Response + Async Processing
+// ENHANCED CHALLENGE DETECTION - Check multiple possible field names
+function findChallenge(data, requestId) {
+  console.log(`🔍 [${requestId}] Searching for challenge in data:`, JSON.stringify(data, null, 2));
+  
+  const possibleFields = [
+    'CHALLENGE',
+    'challenge', 
+    'Challenge',
+    'url_verification',
+    'challenge_code',
+    'verification_token',
+    'token'
+  ];
+  
+  for (const field of possibleFields) {
+    if (data && data[field]) {
+      console.log(`🎯 [${requestId}] Found challenge in field '${field}': ${data[field]}`);
+      return data[field];
+    }
+  }
+  
+  // Check nested objects
+  if (data && typeof data === 'object') {
+    for (const [key, value] of Object.entries(data)) {
+      if (typeof value === 'object' && value !== null) {
+        const nestedChallenge = findChallenge(value, requestId);
+        if (nestedChallenge) {
+          console.log(`🎯 [${requestId}] Found nested challenge in '${key}': ${nestedChallenge}`);
+          return nestedChallenge;
+        }
+      }
+    }
+  }
+  
+  console.log(`❌ [${requestId}] No challenge found in any expected fields`);
+  return null;
+}
+
+// MAIN WEBHOOK HANDLER
 function handleWebhook(req, res) {
   const startTime = Date.now();
   const requestId = Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -89,47 +181,56 @@ function handleWebhook(req, res) {
     let bodyText = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body || '');
     let data = null;
     
-    // Parse/decrypt data
+    console.log(`📥 [${requestId}] Received request - Body length: ${bodyText.length}`);
+    console.log(`📥 [${requestId}] Body preview: ${bodyText.substring(0, 100)}...`);
+    
+    // Try parsing as JSON first (unencrypted)
     try {
       data = JSON.parse(bodyText);
+      console.log(`✅ [${requestId}] Parsed as plain JSON:`, JSON.stringify(data, null, 2));
     } catch (e) {
-      data = quickDecrypt(bodyText);
+      console.log(`📝 [${requestId}] Not plain JSON, attempting decryption...`);
+      data = enhancedDecrypt(bodyText, requestId);
     }
     
     if (!data) {
       console.log(`❌ [${requestId}] No valid data received`);
-      return res.status(200).json({ error: 'Invalid data' });
+      return res.status(200).json({ error: 'Invalid data', request_id: requestId });
     }
     
-    // STEP 1: Handle URL verification challenges IMMEDIATELY
-    const challenge = data.CHALLENGE || data.challenge;
+    // ENHANCED CHALLENGE DETECTION
+    const challenge = findChallenge(data, requestId);
     
     if (challenge) {
       const elapsed = Date.now() - startTime;
-      console.log(`🔐 [${requestId}] CHALLENGE: ${challenge} (${elapsed}ms)`);
+      console.log(`🔐 [${requestId}] CHALLENGE DETECTED: ${challenge} (${elapsed}ms)`);
       
       // IMMEDIATE PLAIN TEXT RESPONSE
-      res.set('Content-Type', 'text/plain');
-      return res.status(200).send(challenge);
+      res.set('Content-Type', 'text/plain; charset=utf-8');
+      res.status(200).send(String(challenge));
+      
+      console.log(`✅ [${requestId}] Challenge response sent successfully`);
+      return;
     }
     
     // Handle URL verification with type field
     if (data.type === 'url_verification') {
-      const verificationChallenge = data.CHALLENGE || data.challenge;
+      console.log(`🔐 [${requestId}] URL verification type detected`);
+      const verificationChallenge = findChallenge(data, requestId);
       if (verificationChallenge) {
-        console.log(`🔐 [${requestId}] URL verification: ${verificationChallenge}`);
-        res.set('Content-Type', 'text/plain');
-        return res.status(200).send(verificationChallenge);
+        res.set('Content-Type', 'text/plain; charset=utf-8');
+        res.status(200).send(String(verificationChallenge));
+        console.log(`✅ [${requestId}] URL verification response sent`);
+        return;
       }
     }
     
-    // STEP 2: For actual events - respond immediately, process async
+    // For other events - immediate success response
     const eventType = data.header?.event_type || data.type || 'unknown';
     const elapsed = Date.now() - startTime;
     
     console.log(`📨 [${requestId}] Event received: ${eventType} (${elapsed}ms)`);
     
-    // IMMEDIATE SUCCESS RESPONSE (within 1 second requirement)
     res.status(200).json({
       status: 'received',
       request_id: requestId,
@@ -137,18 +238,10 @@ function handleWebhook(req, res) {
       processing_time: elapsed + 'ms'
     });
     
-    // STEP 3: Process event asynchronously in background
-    setImmediate(() => {
-      processEventAsync(data, requestId).catch(error => {
-        console.error(`❌ [${requestId}] Background processing failed:`, error);
-      });
-    });
-    
   } catch (error) {
     const elapsed = Date.now() - startTime;
     console.error(`❌ [${requestId}] Webhook error (${elapsed}ms):`, error.message);
     
-    // Even on error, respond quickly to prevent retries
     return res.status(200).json({ 
       error: 'Processing error',
       request_id: requestId,
@@ -157,45 +250,30 @@ function handleWebhook(req, res) {
   }
 }
 
-// DEBUG HANDLER - Enhanced with async pattern
+// DEBUG HANDLER - Same enhanced detection
 function debugHandler(req, res) {
   const requestId = Date.now().toString(36);
   
   console.log(`\n🔍 ========== DEBUG REQUEST [${requestId}] ==========`);
-  console.log('⏰ Timestamp:', new Date().toISOString());
-  console.log('🌐 Method:', req.method);
-  console.log('📍 URL:', req.url);
-  console.log('📋 Headers:', JSON.stringify(req.headers, null, 2));
   
   let bodyText = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body || '');
-  console.log('📦 Body Type:', typeof req.body);
-  console.log('📦 Body Length:', bodyText.length);
-  console.log('📦 Raw Body:', bodyText);
+  console.log(`📦 [${requestId}] Raw Body: ${bodyText}`);
   
-  // Try to parse/decrypt
   let parsed = null;
   try {
     parsed = JSON.parse(bodyText);
-    console.log('✅ Parsed as JSON:', JSON.stringify(parsed, null, 2));
+    console.log(`✅ [${requestId}] Parsed as JSON:`, JSON.stringify(parsed, null, 2));
   } catch (e) {
-    console.log('❌ Not JSON, trying decrypt...');
-    parsed = quickDecrypt(bodyText);
-    if (parsed) {
-      console.log('✅ Decrypted:', JSON.stringify(parsed, null, 2));
-    } else {
-      console.log('❌ Decryption failed');
-    }
+    console.log(`📝 [${requestId}] Not JSON, attempting decryption...`);
+    parsed = enhancedDecrypt(bodyText, requestId);
   }
   
-  // Check for challenge
-  const challenge = parsed?.CHALLENGE || parsed?.challenge;
-  console.log('🔐 Challenge found:', challenge || 'NONE');
+  const challenge = findChallenge(parsed, requestId);
   console.log(`🔍 ========== END DEBUG [${requestId}] ==========\n`);
   
-  // Respond with plain text if challenge, JSON otherwise
   if (challenge) {
-    res.set('Content-Type', 'text/plain');
-    res.status(200).send(challenge);
+    res.set('Content-Type', 'text/plain; charset=utf-8');
+    res.status(200).send(String(challenge));
   } else {
     res.status(200).json({ 
       status: 'debug-ok', 
@@ -203,62 +281,40 @@ function debugHandler(req, res) {
       received: !!bodyText,
       parsed: !!parsed,
       challenge: !!challenge,
+      data_structure: parsed ? Object.keys(parsed) : null,
       timestamp: new Date().toISOString()
     });
   }
 }
 
-// WEBHOOK ENDPOINTS
+// ENDPOINTS
 app.post('/webhook/lark', handleWebhook);
 app.post('/api/webhooks/lark-verify', handleWebhook);
-app.post('/', handleWebhook); // Catch-all
-
-// DEBUG ENDPOINTS
 app.post('/debug', debugHandler);
-app.get('/debug', (req, res) => {
-  res.json({
-    message: 'POST to this endpoint to see debug info',
-    url: 'https://docaflex-webhook-production.up.railway.app/debug',
-    note: 'This endpoint shows exactly what Lark sends'
-  });
-});
+app.post('/', handleWebhook);
 
-// HEALTH CHECK
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
-    message: 'Asynchronous Webhook v1.0.6 - Immediate Response + Background Processing',
+    message: 'Enhanced Decryption Webhook v1.0.7',
     timestamp: new Date().toISOString(),
     encrypt_key_set: !!LARK_ENCRYPT_KEY,
     features: [
-      'Immediate HTTP 200 responses (< 1 second)',
-      'Asynchronous event processing',
-      'Challenge verification support',
-      'Debug endpoint for troubleshooting'
-    ],
-    endpoints: {
-      main: '/webhook/lark',
-      verify: '/api/webhooks/lark-verify',  
-      debug: '/debug',
-      health: '/health'
-    }
+      'Multiple decryption methods (4 different approaches)',
+      'Enhanced challenge detection (7+ field names)',
+      'Detailed debug logging',
+      'Immediate plain text responses'
+    ]
   });
 });
 
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy',
-    version: '1.0.6',
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString()
-  });
+  res.json({ status: 'healthy', version: '1.0.7' });
 });
 
-// START SERVER
 app.listen(PORT, () => {
-  console.log(`🚀 Asynchronous Webhook v1.0.6 running on port ${PORT}`);
+  console.log(`🚀 Enhanced Decryption Webhook v1.0.7 running on port ${PORT}`);
   console.log(`📡 Main URL: https://docaflex-webhook-production.up.railway.app/webhook/lark`);
   console.log(`🔍 Debug URL: https://docaflex-webhook-production.up.railway.app/debug`);
-  console.log(`⚡ Features: Immediate responses + Background event processing`);
-  console.log(`🕒 Started at: ${new Date().toISOString()}`);
+  console.log(`🔧 Enhanced: 4 decryption methods + 7+ challenge field checks`);
 });
