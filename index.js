@@ -188,8 +188,21 @@ function handleWebhook(req, res) {
     try {
       data = JSON.parse(bodyText);
       console.log(`✅ [${requestId}] Parsed as plain JSON:`, JSON.stringify(data, null, 2));
+      
+      // CRITICAL FIX: Check if there's an "encrypt" field that needs to be decrypted
+      if (data && data.encrypt) {
+        console.log(`🔐 [${requestId}] Found encrypted field, decrypting...`);
+        const decryptedData = enhancedDecrypt(data.encrypt, requestId);
+        if (decryptedData) {
+          console.log(`✅ [${requestId}] Successfully decrypted encrypt field:`, JSON.stringify(decryptedData, null, 2));
+          data = decryptedData; // Replace with decrypted content
+        } else {
+          console.log(`❌ [${requestId}] Failed to decrypt encrypt field`);
+        }
+      }
+      
     } catch (e) {
-      console.log(`📝 [${requestId}] Not plain JSON, attempting decryption...`);
+      console.log(`📝 [${requestId}] Not plain JSON, attempting full body decryption...`);
       data = enhancedDecrypt(bodyText, requestId);
     }
     
@@ -263,6 +276,19 @@ function debugHandler(req, res) {
   try {
     parsed = JSON.parse(bodyText);
     console.log(`✅ [${requestId}] Parsed as JSON:`, JSON.stringify(parsed, null, 2));
+    
+    // CRITICAL FIX: Check if there's an "encrypt" field that needs to be decrypted
+    if (parsed && parsed.encrypt) {
+      console.log(`🔐 [${requestId}] Found encrypted field in debug, decrypting...`);
+      const decryptedData = enhancedDecrypt(parsed.encrypt, requestId);
+      if (decryptedData) {
+        console.log(`✅ [${requestId}] Successfully decrypted encrypt field in debug:`, JSON.stringify(decryptedData, null, 2));
+        parsed = decryptedData; // Replace with decrypted content
+      } else {
+        console.log(`❌ [${requestId}] Failed to decrypt encrypt field in debug`);
+      }
+    }
+    
   } catch (e) {
     console.log(`📝 [${requestId}] Not JSON, attempting decryption...`);
     parsed = enhancedDecrypt(bodyText, requestId);

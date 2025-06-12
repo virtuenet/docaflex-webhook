@@ -1,7 +1,7 @@
 {
   "name": "docaflex-enhanced-webhook",
-  "version": "1.0.7",
-  "description": "Enhanced Lark Webhook with Multiple Decryption Methods and Challenge Detection",
+  "version": "1.0.8",
+  "description": "Enhanced Lark Webhook with Encrypt Field Extraction and Challenge Detection",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -13,7 +13,7 @@
   "engines": {
     "node": ">=14.0.0"
   },
-  "keywords": ["webhook", "lark", "enhanced-decryption", "challenge-detection", "multiple-methods"],
+  "keywords": ["webhook", "lark", "encrypt-field", "challenge-detection", "decryption"],
   "author": "DocaFlex Team",
   "license": "MIT"
 } 
