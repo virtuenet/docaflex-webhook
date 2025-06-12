@@ -40,6 +40,47 @@ function enhancedDecrypt(encryptedData, requestId) {
   console.log(`🔓 [${requestId}] Decrypt input preview: ${dataToDecrypt.substring(0, 50)}...`);
   console.log(`🔑 [${requestId}] Using encrypt key: ${LARK_ENCRYPT_KEY.substring(0, 8)}... (length: ${LARK_ENCRYPT_KEY.length})`);
 
+  // Method 0: Lark Official Method (from their docs) - Key as UTF-8 bytes, zero IV
+  try {
+    console.log(`🔄 [${requestId}] Method 0: Lark Official Documentation Method`);
+    
+    // Use encrypt key as UTF-8 bytes exactly as provided
+    const keyBuffer = Buffer.from(LARK_ENCRYPT_KEY, 'utf8');
+    console.log(`🔑 [${requestId}] Key buffer length: ${keyBuffer.length}`);
+    
+    // Pad or truncate to exactly 32 bytes for AES-256
+    let finalKey;
+    if (keyBuffer.length > 32) {
+      finalKey = keyBuffer.slice(0, 32);
+      console.log(`🔑 [${requestId}] Key truncated to 32 bytes`);
+    } else if (keyBuffer.length < 32) {
+      const padding = Buffer.alloc(32 - keyBuffer.length, 0);
+      finalKey = Buffer.concat([keyBuffer, padding]);
+      console.log(`🔑 [${requestId}] Key padded to 32 bytes with zeros`);
+    } else {
+      finalKey = keyBuffer;
+      console.log(`🔑 [${requestId}] Key is exactly 32 bytes`);
+    }
+    
+    const iv = Buffer.alloc(16, 0); // Zero IV as per Lark docs
+    console.log(`🔓 [${requestId}] Using zero IV`);
+    
+    const decipher = crypto.createDecipheriv('aes-256-cbc', finalKey, iv);
+    decipher.setAutoPadding(true);
+    
+    let decrypted = decipher.update(dataToDecrypt, 'base64', 'utf8');
+    decrypted += decipher.final('utf8');
+    
+    console.log(`✅ [${requestId}] Method 0 decrypted length: ${decrypted.length}`);
+    console.log(`✅ [${requestId}] Method 0 decrypted content: ${decrypted}`);
+    
+    const parsed = JSON.parse(decrypted);
+    console.log(`✅ [${requestId}] Method 0 parsed successfully:`, JSON.stringify(parsed, null, 2));
+    return parsed;
+  } catch (error) {
+    console.log(`❌ [${requestId}] Method 0 failed: ${error.message}`);
+  }
+
   // Method 1: Standard Lark AES-256-CBC with SHA256 hashed key
   try {
     console.log(`🔄 [${requestId}] Method 1: Standard Lark AES-256-CBC`);
@@ -62,21 +103,31 @@ function enhancedDecrypt(encryptedData, requestId) {
     console.log(`❌ [${requestId}] Method 1 failed: ${error.message}`);
   }
 
-  // Method 2: Lark Official Method - Direct key as bytes
+  // Method 2: Try with the key as hex
   try {
-    console.log(`🔄 [${requestId}] Method 2: Lark Official - Direct key bytes`);
+    console.log(`🔄 [${requestId}] Method 2: Key as hex bytes`);
     
-    // Use the encrypt key directly as bytes (pad or truncate to 32 bytes)
-    let keyBytes = Buffer.from(LARK_ENCRYPT_KEY, 'utf8');
-    if (keyBytes.length > 32) {
-      keyBytes = keyBytes.slice(0, 32);
-    } else if (keyBytes.length < 32) {
-      const padding = Buffer.alloc(32 - keyBytes.length, 0);
-      keyBytes = Buffer.concat([keyBytes, padding]);
+    // Try to interpret the key as hex
+    let keyBuffer;
+    if (LARK_ENCRYPT_KEY.length % 2 === 0 && /^[0-9a-fA-F]+$/.test(LARK_ENCRYPT_KEY)) {
+      keyBuffer = Buffer.from(LARK_ENCRYPT_KEY, 'hex');
+      console.log(`🔑 [${requestId}] Treating key as hex, buffer length: ${keyBuffer.length}`);
+    } else {
+      // Fallback to UTF-8
+      keyBuffer = Buffer.from(LARK_ENCRYPT_KEY, 'utf8');
+      console.log(`🔑 [${requestId}] Key not hex, using UTF-8, buffer length: ${keyBuffer.length}`);
+    }
+    
+    // Ensure 32 bytes
+    if (keyBuffer.length > 32) {
+      keyBuffer = keyBuffer.slice(0, 32);
+    } else if (keyBuffer.length < 32) {
+      const padding = Buffer.alloc(32 - keyBuffer.length, 0);
+      keyBuffer = Buffer.concat([keyBuffer, padding]);
     }
     
     const iv = Buffer.alloc(16, 0);
-    const decipher = crypto.createDecipheriv('aes-256-cbc', keyBytes, iv);
+    const decipher = crypto.createDecipheriv('aes-256-cbc', keyBuffer, iv);
     
     let decrypted = decipher.update(dataToDecrypt, 'base64', 'utf8');
     decrypted += decipher.final('utf8');
@@ -89,16 +140,16 @@ function enhancedDecrypt(encryptedData, requestId) {
     console.log(`❌ [${requestId}] Method 2 failed: ${error.message}`);
   }
 
-  // Method 3: Try AES-128-CBC (some Lark versions use this)
+  // Method 3: Try ECB mode (no IV)
   try {
-    console.log(`🔄 [${requestId}] Method 3: AES-128-CBC approach`);
+    console.log(`🔄 [${requestId}] Method 3: AES-256-ECB (no IV)`);
     
-    // Use first 16 bytes of hashed key for AES-128
-    const fullKey = crypto.createHash('sha256').update(LARK_ENCRYPT_KEY, 'utf8').digest();
-    const key128 = fullKey.slice(0, 16);
-    const iv = Buffer.alloc(16, 0);
+    const keyBuffer = Buffer.from(LARK_ENCRYPT_KEY, 'utf8');
+    let finalKey = keyBuffer.length > 32 ? keyBuffer.slice(0, 32) : 
+                   keyBuffer.length < 32 ? Buffer.concat([keyBuffer, Buffer.alloc(32 - keyBuffer.length, 0)]) : 
+                   keyBuffer;
     
-    const decipher = crypto.createDecipheriv('aes-128-cbc', key128, iv);
+    const decipher = crypto.createDecipheriv('aes-256-ecb', finalKey);
     let decrypted = decipher.update(dataToDecrypt, 'base64', 'utf8');
     decrypted += decipher.final('utf8');
     
@@ -110,14 +161,17 @@ function enhancedDecrypt(encryptedData, requestId) {
     console.log(`❌ [${requestId}] Method 3 failed: ${error.message}`);
   }
 
-  // Method 4: Try with hex encoding instead of base64
+  // Method 4: Try with MD5 hash of key (some older implementations)
   try {
-    console.log(`🔄 [${requestId}] Method 4: Hex encoding approach`);
-    const key = crypto.createHash('sha256').update(LARK_ENCRYPT_KEY, 'utf8').digest();
+    console.log(`🔄 [${requestId}] Method 4: MD5 hashed key`);
+    
+    const md5Key = crypto.createHash('md5').update(LARK_ENCRYPT_KEY, 'utf8').digest();
+    // MD5 gives 16 bytes, double it for 32 bytes
+    const key = Buffer.concat([md5Key, md5Key]);
     const iv = Buffer.alloc(16, 0);
     
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-    let decrypted = decipher.update(dataToDecrypt, 'hex', 'utf8');
+    let decrypted = decipher.update(dataToDecrypt, 'base64', 'utf8');
     decrypted += decipher.final('utf8');
     
     console.log(`✅ [${requestId}] Method 4 decrypted: ${decrypted}`);
@@ -128,11 +182,11 @@ function enhancedDecrypt(encryptedData, requestId) {
     console.log(`❌ [${requestId}] Method 4 failed: ${error.message}`);
   }
 
-  // Method 5: Try UTF-8 direct conversion (no encryption - for testing)
+  // Method 5: Base64 only (maybe it's not encrypted)
   try {
-    console.log(`🔄 [${requestId}] Method 5: Direct base64 decode (testing)`);
+    console.log(`🔄 [${requestId}] Method 5: Direct base64 decode (no encryption)`);
     const decoded = Buffer.from(dataToDecrypt, 'base64').toString('utf8');
-    console.log(`🔍 [${requestId}] Method 5 decoded: ${decoded}`);
+    console.log(`🔍 [${requestId}] Method 5 decoded: ${decoded.substring(0, 100)}...`);
     
     const parsed = JSON.parse(decoded);
     console.log(`✅ [${requestId}] Method 5 parsed successfully:`, JSON.stringify(parsed, null, 2));
@@ -141,31 +195,13 @@ function enhancedDecrypt(encryptedData, requestId) {
     console.log(`❌ [${requestId}] Method 5 failed: ${error.message}`);
   }
 
-  // Method 6: Alternative key derivation (double hash)
-  try {
-    console.log(`🔄 [${requestId}] Method 6: Double hash key derivation`);
-    const firstHash = crypto.createHash('sha256').update(LARK_ENCRYPT_KEY, 'utf8').digest('hex');
-    const key = crypto.createHash('sha256').update(firstHash, 'utf8').digest();
-    const iv = Buffer.alloc(16, 0);
-    
-    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-    let decrypted = decipher.update(dataToDecrypt, 'base64', 'utf8');
-    decrypted += decipher.final('utf8');
-    
-    console.log(`✅ [${requestId}] Method 6 decrypted: ${decrypted}`);
-    const parsed = JSON.parse(decrypted);
-    console.log(`✅ [${requestId}] Method 6 parsed successfully:`, JSON.stringify(parsed, null, 2));
-    return parsed;
-  } catch (error) {
-    console.log(`❌ [${requestId}] Method 6 failed: ${error.message}`);
-  }
-
-  console.log(`❌ [${requestId}] All 6 decryption methods failed`);
+  console.log(`❌ [${requestId}] All 5 decryption methods failed`);
   console.log(`🔍 [${requestId}] Raw data analysis:`);
   console.log(`🔍 [${requestId}] - Length: ${dataToDecrypt.length}`);
   console.log(`🔍 [${requestId}] - Starts with: ${dataToDecrypt.substring(0, 10)}`);
   console.log(`🔍 [${requestId}] - Ends with: ${dataToDecrypt.substring(-10)}`);
   console.log(`🔍 [${requestId}] - Encrypt key length: ${LARK_ENCRYPT_KEY.length}`);
+  console.log(`🔍 [${requestId}] - Key starts with: ${LARK_ENCRYPT_KEY.substring(0, 10)}`);
   
   return null;
 }
