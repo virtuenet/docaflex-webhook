@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Deployment timestamp: 2024-06-12 09:59 - Manual redeploy trigger
 // Lark app credentials from environment variables
 const LARK_APP_ID = process.env.LARK_APP_ID || 'cli_a8cecb6af438d02f';
 const LARK_APP_SECRET = process.env.LARK_APP_SECRET || 'ZsI84qt2SA3L1PedniU5ShMbQqtpUrql';
