@@ -1,19 +1,11 @@
 const express = require('express');
-const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// FAST WEBHOOK v1.0.13 - Immediate responses, minimal logging
-const LARK_ENCRYPT_KEY = process.env.LARK_ENCRYPT_KEY;
-
-console.log('🚀 Fast Webhook v1.0.13 - Immediate Responses');
-console.log('🔐 Encrypt key set:', !!LARK_ENCRYPT_KEY);
+console.log('🚀 Simple Webhook v1.0.14 - Ultra Fast');
 
 // Raw body parsing
-app.use(express.raw({ 
-  type: '*/*',
-  limit: '10mb'
-}));
+app.use(express.raw({ type: '*/*', limit: '10mb' }));
 
 // CORS
 app.use((req, res, next) => {
@@ -27,104 +19,41 @@ app.use((req, res, next) => {
   }
 });
 
-// FAST DECRYPTION - Only essential methods
-function fastDecrypt(encryptedData, requestId) {
-  if (!LARK_ENCRYPT_KEY) {
-    return null;
-  }
-
-  const dataToDecrypt = encryptedData.trim();
-  
-  // Method 1: First 32 chars of key
-  try {
-    const keyStr = LARK_ENCRYPT_KEY.slice(0, 32);
-    const keyBuffer = Buffer.from(keyStr, 'utf8');
-    const iv = Buffer.alloc(16, 0);
-    
-    const decipher = crypto.createDecipheriv('aes-256-cbc', keyBuffer, iv);
-    decipher.setAutoPadding(true);
-    
-    let decrypted = decipher.update(dataToDecrypt, 'base64', 'utf8');
-    decrypted += decipher.final('utf8');
-    
-    return JSON.parse(decrypted);
-  } catch (error) {
-    // Silent fail, try next method
-  }
-
-  // Method 2: SHA256 hashed key
-  try {
-    const key = crypto.createHash('sha256').update(LARK_ENCRYPT_KEY, 'utf8').digest();
-    const iv = Buffer.alloc(16, 0);
-    
-    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-    decipher.setAutoPadding(true);
-    
-    let decrypted = decipher.update(dataToDecrypt, 'base64', 'utf8');
-    decrypted += decipher.final('utf8');
-    
-    return JSON.parse(decrypted);
-  } catch (error) {
-    // Silent fail
-  }
-
-  return null;
-}
-
-// FAST CHALLENGE DETECTION
-function findChallenge(data) {
-  if (!data) return null;
-  
-  // Check common challenge fields
-  if (data.challenge) return data.challenge;
-  if (data.CHALLENGE) return data.CHALLENGE;
-  if (data.Challenge) return data.Challenge;
-  
-  return null;
-}
-
-// MAIN WEBHOOK HANDLER - IMMEDIATE RESPONSE
+// SIMPLE WEBHOOK HANDLER
 function handleWebhook(req, res) {
-  const requestId = Date.now().toString(36);
-  
-  // IMMEDIATE RESPONSE FIRST
-  res.set('Content-Type', 'text/plain; charset=utf-8');
-  
   try {
     let bodyText = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body || '');
-    let data = null;
     
-    // Try parsing as JSON first
+    // Try to parse as JSON
+    let data = null;
     try {
       data = JSON.parse(bodyText);
-      
-      // Check if there's an "encrypt" field
-      if (data && data.encrypt) {
-        const decryptedData = fastDecrypt(data.encrypt, requestId);
-        if (decryptedData) {
-          data = decryptedData;
-        }
-      }
     } catch (e) {
-      // Try full body decryption
-      data = fastDecrypt(bodyText, requestId);
+      // Not JSON, that's ok
     }
     
-    // Look for challenge
-    const challenge = findChallenge(data);
+    // Look for challenge in common places
+    let challenge = null;
+    if (data) {
+      challenge = data.challenge || data.CHALLENGE || data.Challenge;
+    }
     
+    // If challenge found, return it immediately
     if (challenge) {
-      console.log(`✅ [${requestId}] Challenge found: ${challenge}`);
+      console.log('✅ Challenge found:', challenge);
+      res.set('Content-Type', 'text/plain');
       res.status(200).send(String(challenge));
       return;
     }
     
-    // No challenge found - send OK
-    console.log(`📨 [${requestId}] Event received, no challenge`);
+    // No challenge, just return OK
+    console.log('📨 Event received');
+    res.set('Content-Type', 'text/plain');
     res.status(200).send('OK');
-
+    
   } catch (error) {
-    console.error(`❌ [${requestId}] Error:`, error.message);
+    console.error('❌ Error:', error.message);
+    res.set('Content-Type', 'text/plain');
     res.status(200).send('OK');
   }
 }
@@ -138,16 +67,16 @@ app.post('/', handleWebhook);
 app.get('/', (req, res) => {
   res.json({ 
     status: 'ok', 
-    message: 'Fast Webhook v1.0.13',
+    message: 'Simple Webhook v1.0.14',
     timestamp: new Date().toISOString()
   });
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', version: '1.0.13' });
+  res.json({ status: 'healthy', version: '1.0.14' });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Fast Webhook v1.0.13 running on port ${PORT}`);
+  console.log(`🚀 Simple Webhook v1.0.14 running on port ${PORT}`);
   console.log(`📡 URL: https://docaflex-webhook-production.up.railway.app/webhook/lark`);
 });
