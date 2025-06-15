@@ -1,8 +1,9 @@
 const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
-console.log('🚀 Simple Webhook v1.0.14 - Ultra Fast');
+console.log('🚀 Simple Webhook v1.0.15 - Railway Fix');
+console.log('📡 Port:', PORT);
 
 // Raw body parsing
 app.use(express.raw({ type: '*/*', limit: '10mb' }));
@@ -67,16 +68,29 @@ app.post('/', handleWebhook);
 app.get('/', (req, res) => {
   res.json({ 
     status: 'ok', 
-    message: 'Simple Webhook v1.0.14',
-    timestamp: new Date().toISOString()
+    message: 'Simple Webhook v1.0.15',
+    timestamp: new Date().toISOString(),
+    port: PORT
   });
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', version: '1.0.14' });
+  res.json({ 
+    status: 'healthy', 
+    version: '1.0.15',
+    timestamp: new Date().toISOString()
+  });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Simple Webhook v1.0.14 running on port ${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Simple Webhook v1.0.15 running on 0.0.0.0:${PORT}`);
   console.log(`📡 URL: https://docaflex-webhook-production.up.railway.app/webhook/lark`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Process terminated');
+  });
 });
