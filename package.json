@@ -1,7 +1,7 @@
 {
   "name": "docaflex-enhanced-webhook",
-  "version": "1.0.10",
-  "description": "Enhanced Lark Webhook with Official Decryption Method and ECB/MD5 Support",
+  "version": "1.0.12",
+  "description": "Enhanced Lark Webhook with Complete Data Logging and Base64 Analysis",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -13,7 +13,7 @@
   "engines": {
     "node": ">=14.0.0"
   },
-  "keywords": ["webhook", "lark", "official-method", "ecb", "md5"],
+  "keywords": ["webhook", "lark", "complete-logging", "base64-analysis"],
   "author": "DocaFlex Team",
   "license": "MIT"
 } 
