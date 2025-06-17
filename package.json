@@ -1,10 +1,10 @@
 {
-  "name": "docaflex-ultra-fast-webhook",
-  "version": "1.0.16",
-  "description": "Ultra-Fast Lark Webhook - Sub-1-second Response",
-  "main": "server.js",
+  "name": "docaflex-simple-test-webhook",
+  "version": "1.0.17",
+  "description": "Simple Test Webhook - Always Returns Challenge",
+  "main": "simple-webhook.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node simple-webhook.js"
   },
   "dependencies": {
     "express": "^4.18.2"
@@ -12,7 +12,7 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "keywords": ["webhook", "lark", "ultra-fast", "sub-1-second"],
+  "keywords": ["webhook", "lark", "test", "simple"],
   "author": "DocaFlex Team",
   "license": "MIT"
 } 
