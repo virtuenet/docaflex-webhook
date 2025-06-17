@@ -1,10 +1,10 @@
 {
   "name": "docaflex-simple-test-webhook",
-  "version": "1.0.17",
-  "description": "Simple Test Webhook - Always Returns Challenge",
-  "main": "simple-webhook.js",
+  "version": "1.0.18",
+  "description": "Simple Lark Webhook - No Encryption",
+  "main": "index.js",
   "scripts": {
-    "start": "node simple-webhook.js"
+    "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.21.2"
@@ -15,8 +15,8 @@
   "keywords": [
     "webhook",
     "lark",
-    "test",
-    "simple"
+    "simple",
+    "no-encryption"
   ],
   "author": "DocaFlex Team",
   "license": "MIT"
