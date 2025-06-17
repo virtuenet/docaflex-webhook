@@ -1,19 +1,18 @@
 {
-  "name": "docaflex-simple-webhook",
-  "version": "1.0.15",
-  "description": "Simple Lark Webhook - Railway Fix",
-  "main": "index.js",
+  "name": "docaflex-ultra-fast-webhook",
+  "version": "1.0.16",
+  "description": "Ultra-Fast Lark Webhook - Sub-1-second Response",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
-  "keywords": ["webhook", "lark", "simple", "railway"],
+  "keywords": ["webhook", "lark", "ultra-fast", "sub-1-second"],
   "author": "DocaFlex Team",
   "license": "MIT"
 } 
