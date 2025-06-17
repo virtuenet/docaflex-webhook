@@ -1,0 +1,23 @@
+🚀 Lark Webhook - JSON Response Format
+🚀 Lark JSON webhook running on 0.0.0.0:3000
+📡 Ready for ngrok: ngrok http 3000
+
+=== LARK WEBHOOK REQUEST ===
+📥 Time: 2025-06-17T15:03:56.485Z
+📦 Body length: 23
+📦 Body content: {"challenge":"test123"}
+✅ Parsed JSON: {
+  "challenge": "test123"
+}
+🎯 Plain challenge found: test123
+
+=== LARK WEBHOOK REQUEST ===
+📥 Time: 2025-06-17T15:04:04.200Z
+📦 Body length: 33
+📦 Body content: {"encrypt":"test_encrypted_data"}
+✅ Parsed JSON: {
+  "encrypt": "test_encrypted_data"
+}
+🔐 Encrypted data detected
+🔐 Encrypt field: test_encrypted_data
+🔄 Returning JSON challenge response for encrypted data

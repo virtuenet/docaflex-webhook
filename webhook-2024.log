@@ -1,0 +1,27 @@
+🚀 Lark Webhook 2024 - Latest Event Subscription Format
+🚀 Lark Webhook 2024 running on 0.0.0.0:3000
+📡 Ready for ngrok: ngrok http 3000
+🔧 Features: URL verification, encryption, signature validation
+
+=== LARK WEBHOOK 2024 ===
+📥 Time: 2025-06-17T15:27:15.374Z
+📦 Body length: 49
+📦 Headers: { timestamp: undefined, nonce: undefined, signature: 'none' }
+📦 Body: {"type":"url_verification","challenge":"test123"}
+✅ Parsed JSON: {
+  "type": "url_verification",
+  "challenge": "test123"
+}
+🔗 URL verification challenge: test123
+
+=== LARK WEBHOOK 2024 ===
+📥 Time: 2025-06-17T15:27:29.008Z
+📦 Body length: 179
+📦 Headers: { timestamp: undefined, nonce: undefined, signature: 'none' }
+📦 Body: {"encrypt":"ByqHqVTDRVzpEr37W85Vb7U/QT/ktfpLXyd8QmLMI6xGr1F58r8tEXr1Yn7zxxnQebDa5FXPMnvlqYvS6YlC8xloYUknJZLBGBx5PznVSDKfnfaUynJJFLXY/nT5lBTfettnYYH0ZyEJlCeTsAWdVWGAwgqtCEZMYN57W"}
+✅ Parsed JSON: {
+  "encrypt": "ByqHqVTDRVzpEr37W85Vb7U/QT/ktfpLXyd8QmLMI6xGr1F58r8tEXr1Yn7zxxnQebDa5FXPMnvlqYvS6YlC8xloYUknJZLBGBx5PznVSDKfnfaUynJJFLXY/nT5lBTfettnYYH0ZyEJlCeTsAWdVWGAwgqtCEZMYN57W"
+}
+🔐 Processing encrypted content...
+❌ Decryption failed with both methods: error:1C80006B:Provider routines::wrong final block length error:1C80006B:Provider routines::wrong final block length
+❌ Failed to decrypt, returning challenge placeholder

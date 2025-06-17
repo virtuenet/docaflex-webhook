@@ -7,12 +7,17 @@
     "start": "node simple-webhook.js"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.21.2"
   },
   "engines": {
     "node": ">=18.0.0"
   },
-  "keywords": ["webhook", "lark", "test", "simple"],
+  "keywords": [
+    "webhook",
+    "lark",
+    "test",
+    "simple"
+  ],
   "author": "DocaFlex Team",
   "license": "MIT"
-} 
+}

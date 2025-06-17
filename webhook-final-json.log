@@ -1,0 +1,41 @@
+🚀 Lark Webhook - JSON Challenge Response Format
+🚀 Lark JSON Webhook running on 0.0.0.0:3000
+📡 Ready for ngrok: ngrok http 3000
+🔧 All responses in JSON format including challenges
+
+=== LARK WEBHOOK JSON RESPONSE ===
+📥 Time: 2025-06-17T15:30:55.026Z
+📦 Body length: 49
+📦 Headers: { timestamp: undefined, nonce: undefined, signature: 'none' }
+📦 Body: {"type":"url_verification","challenge":"test123"}
+✅ Parsed JSON: {
+  "type": "url_verification",
+  "challenge": "test123"
+}
+🔗 URL verification challenge: test123
+
+=== LARK WEBHOOK JSON RESPONSE ===
+📥 Time: 2025-06-17T15:31:04.104Z
+📦 Body length: 33
+📦 Headers: { timestamp: undefined, nonce: undefined, signature: 'none' }
+📦 Body: {"encrypt":"test_encrypted_data"}
+✅ Parsed JSON: {
+  "encrypt": "test_encrypted_data"
+}
+🔐 Processing encrypted content...
+❌ Decryption failed with both methods: error:1C80006B:Provider routines::wrong final block length error:1C80006B:Provider routines::wrong final block length
+❌ Failed to decrypt, returning JSON challenge placeholder
+
+=== LARK WEBHOOK JSON RESPONSE ===
+📥 Time: 2025-06-17T15:31:13.170Z
+📦 Body length: 52
+📦 Headers: { timestamp: undefined, nonce: undefined, signature: 'none' }
+📦 Body: {"type":"event_callback","event":{"type":"message"}}
+✅ Parsed JSON: {
+  "type": "event_callback",
+  "event": {
+    "type": "message"
+  }
+}
+📨 Regular event callback received
+📋 Event type: message

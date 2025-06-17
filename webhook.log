@@ -1,0 +1,9 @@
+🚀 Simple Test Webhook - Always Returns Challenge
+🚀 Simple webhook running on 0.0.0.0:3000
+📥 Request received
+📦 Body length: 23
+📦 Body content: {"challenge":"test123"}...
+✅ Parsed JSON: {
+  "challenge": "test123"
+}
+🎯 Plain challenge found: test123

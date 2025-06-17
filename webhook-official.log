@@ -1,0 +1,26 @@
+🚀 Lark Webhook - Official Documentation Implementation
+🚀 Official Lark Webhook running on 0.0.0.0:3000
+📡 Ready for ngrok: ngrok http 3000
+🔧 Implementation: Official Lark Documentation
+
+=== LARK WEBHOOK OFFICIAL ===
+📥 Time: 2025-06-17T15:42:45.567Z
+📦 Body length: 49
+📦 Headers: { timestamp: undefined, nonce: undefined, signature: 'none' }
+📦 Body: {"type":"url_verification","challenge":"test123"}
+✅ Parsed JSON: {
+  "type": "url_verification",
+  "challenge": "test123"
+}
+🔗 URL verification challenge: test123
+
+=== LARK WEBHOOK OFFICIAL ===
+📥 Time: 2025-06-17T15:43:02.787Z
+📦 Body length: 179
+📦 Headers: { timestamp: undefined, nonce: undefined, signature: 'none' }
+📦 Body: {"encrypt":"ByqHqVTDRVzpEr37W85Vb7U/QT/ktfpLXyd8QmLMI6xGr1F58r8tEXr1Yn7zxxnQebDa5FXPMnvlqYvS6YlC8xloYUknJZLBGBx5PznVSDKfnfaUynJJFLXY/nT5lBTfettnYYH0ZyEJlCeTsAWdVWGAwgqtCEZMYN57W"}
+✅ Parsed JSON: {
+  "encrypt": "ByqHqVTDRVzpEr37W85Vb7U/QT/ktfpLXyd8QmLMI6xGr1F58r8tEXr1Yn7zxxnQebDa5FXPMnvlqYvS6YlC8xloYUknJZLBGBx5PznVSDKfnfaUynJJFLXY/nT5lBTfettnYYH0ZyEJlCeTsAWdVWGAwgqtCEZMYN57W"
+}
+🔐 Processing encrypted content with official method...
+❌ Official decryption failed: error:1C80006B:Provider routines::wrong final block length
